@@ -78,6 +78,12 @@ public final class FDUtil {
     return accum;
   }
 
+  /**
+   * Returns the set of all attributes present in a FDSet
+   * 
+   * @param fdset (Immutable) FD Set
+   * @return  all attributes in the given set
+   */
   private static Set<String> allAttributes(final FDSet fdset) {
     Set<String> out = new HashSet<>();
     for (final FD fd : fdset) {
