@@ -2,11 +2,11 @@ import java.util.Set;
 import java.util.HashSet;
 
 /**
- * This utility class is not meant to be instantitated, and just provides some
+ * This utility class is not meant to be instantiated, and just provides some
  * useful methods on FD sets.
  * 
- * @author <<YOUR NAME>>
- * @version <<DATE>>
+ * @author Tristan Gaeta
+ * @version 10-27-22
  */
 public final class FDUtil {
 
@@ -17,10 +17,15 @@ public final class FDUtil {
    * @return a set of trivial FDs with respect to the given FDSet
    */
   public static FDSet trivial(final FDSet fdset) {
-    // TODO: Obtain the power set of each FD's left-hand attributes. For each
-    // element in the power set, create a new FD and add it to the a new FDSet.
-
-    return null;
+    FDSet out = new FDSet();
+    for (final FD fd : fdset) {
+      Set<Set<String>> ps = powerSet(fd.getLeft());
+      for (Set<String> right : ps) {
+        if (right.size() > 0)
+          out.add(new FD(fd.getLeft(), right));
+      }
+    }
+    return out;
   }
 
   /**
@@ -31,10 +36,14 @@ public final class FDUtil {
    * @return a set of augmented FDs
    */
   public static FDSet augment(final FDSet fdset, final Set<String> attrs) {
-    // TODO: Copy each FD in the given set and then union both sides with the given
-    // set of attributes, and add this augmented FD to a new FDSet.
-
-    return null;
+    FDSet out = new FDSet();
+    for (final FD fd : fdset) {
+      FD newFD = new FD(fd);
+      newFD.addToLeft(attrs);
+      newFD.addToRight(attrs);
+      out.add(newFD);
+    }
+    return out;
   }
 
   /**
@@ -44,11 +53,38 @@ public final class FDUtil {
    * @return all transitive FDs with respect to the input FD set
    */
   public static FDSet transitive(final FDSet fdset) {
-    // TODO: Examine each pair of FDs in the given set. If the transitive property
-    // holds on the pair of FDs, then generate the new FD and add it to a new FDSet.
-    // Repeat until no new transitive FDs are found.
+    return transitiveRec(new FDSet(), new FDSet(fdset));
+  }
 
-    return null;
+  /**
+   * Recursive helper method for transitive
+   * 
+   * @param accum the accumulation of transitive FDs
+   * @param fdset the set of known/derived FDs
+   * @return all transitive FDs with respect to the input FD set
+   */
+  private static FDSet transitiveRec(FDSet accum, FDSet fdset) {
+    for (FD fdA : fdset) {
+      for (FD fdB : fdset) {
+        if (fdB.getLeft().containsAll(fdA.getRight())) {
+          FD fd = new FD(fdA.getLeft(), fdB.getRight());
+          if (fdset.getSet().add(fd)) {
+            accum.add(fd);
+            return transitiveRec(accum, fdset);
+          }
+        }
+      }
+    }
+    return accum;
+  }
+
+  private static Set<String> allAttributes(final FDSet fdset) {
+    Set<String> out = new HashSet<>();
+    for (final FD fd : fdset) {
+      out.addAll(fd.getLeft());
+      out.addAll(fd.getRight());
+    }
+    return out;
   }
 
   /**
@@ -58,13 +94,21 @@ public final class FDUtil {
    * @return the closure of the input FD Set
    */
   public static FDSet fdSetClosure(final FDSet fdset) {
-    // TODO: Use the FDSet copy constructor to deep copy the given FDSet
-
-    // TODO: Generate new FDs by applying Trivial and Augmentation Rules, followed
-    // by Transitivity Rule, and add new FDs to the result.
-    // Repeat until no further changes are detected.
-
-    return null;
+    FDSet copy = new FDSet(fdset);
+    boolean repeat = true;
+    while (repeat) {
+      repeat = false;
+      // augment
+      Set<Set<String>> ps = powerSet(allAttributes(fdset));
+      for (Set<String> subset : ps) {
+        repeat |= copy.getSet().addAll(augment(fdset, subset).getSet());
+      }
+      // trivial
+      repeat |= copy.getSet().addAll(trivial(copy).getSet());
+      // transitivity
+      repeat |= copy.getSet().addAll(transitive(copy).getSet());
+    }
+    return copy;
   }
 
   /**
